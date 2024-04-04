@@ -4,14 +4,13 @@
 import { useEffect, useState } from "react";
 
 import axios from "axios";
-import TransactionItem from "@/components/TransactionItem";
-import DailyStatItem from "@/components/DailyStatItem";
+import TransactionItem from "@/components/transactions/TransactionItem";
 
 const apiKey = "19193389-443b-4d59-9dd9-500bde0931c7";
 const secret = "ThLfVLGaY5CQQut";
 const baseUrl = "https://api.rango.exchange/dapp-stats/";
 
-export default function Home() {
+export function Content() {
   const [transactions, setTransactions] = useState([]);
   const [stats, setStats] = useState([]);
 
@@ -38,14 +37,6 @@ export default function Home() {
         {
           transactions.map((item, i) => {
             return <TransactionItem key={i} item={item} />
-          })
-        }
-      </div>
-      <div className="text-4xl p-4 text-center">Daily Stats</div>
-      <div>
-        {
-          stats.map((item, i) => {
-            return <DailyStatItem key={i} item={item} />
           })
         }
       </div>
