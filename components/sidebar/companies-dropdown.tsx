@@ -7,9 +7,7 @@ import {
   DropdownTrigger,
 } from "@nextui-org/react";
 import React, { useState } from "react";
-import { AcmeIcon } from "../icons/acme-icon";
-import { AcmeLogo } from "../icons/acmelogo";
-import { BottomIcon } from "../icons/sidebar/bottom-icon";
+import { DexifierIcon } from "../icons/dexifier-icon";
 
 interface Company {
   name: string;
@@ -21,7 +19,7 @@ export const CompaniesDropdown = () => {
   const [company, setCompany] = useState<Company>({
     name: "Dexifier",
     location: "",
-    logo: <AcmeIcon />,
+    logo: <DexifierIcon />,
   });
   return (
     <div className="flex items-center gap-2">

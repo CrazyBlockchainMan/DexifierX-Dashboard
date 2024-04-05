@@ -1,6 +1,6 @@
 import React from "react";
 
-export const AcmeIcon = () => {
+export const DexifierIcon = () => {
   return (
     <svg
       className="w-[36px]"
