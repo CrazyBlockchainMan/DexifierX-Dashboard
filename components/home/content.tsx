@@ -1,28 +1,62 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+  Input,
+  Button,
+  DropdownTrigger,
+  Dropdown,
+  DropdownMenu,
+  DropdownItem,
+  Chip,
+  User,
+  Pagination,
+  Selection,
+  ChipProps,
+  SortDescriptor
+} from "@nextui-org/react";
+import { ChevronDownIcon } from "@/components/icons/chevron-down-icon";
 
 import axios from "axios";
-import DailyStatItem from "@/components/home/DailyStatItem";
+import { apiKey, secret, baseUrl } from "@/config/rango";
 
-const apiKey = "19193389-443b-4d59-9dd9-500bde0931c7";
-const secret = "ThLfVLGaY5CQQut";
-const baseUrl = "https://api.rango.exchange/dapp-stats/";
+interface DailyStatType {
+  date: string;
+  success: number;
+  failure: number;
+  volumeUsd: number;
+  volumeUsdFirstStep: number;
+  directFee: number;
+  manualFee: number;
+}
+
+const columns = [
+  { name: "Date", uid: "date" },
+  { name: "Volume USD", uid: "volumeUsd" },
+  { name: "Volume USD First Step", uid: "volumeUsdFirstStep" },
+  { name: "Direct Fee", uid: "directFee" },
+  { name: "Manual Fee", uid: "manualFee" },
+  { name: "Status", uid: "status" },
+];
 
 export function Content() {
-  const [transactions, setTransactions] = useState([]);
-  const [stats, setStats] = useState([]);
+  const [statusFilter, setStatusFilter] = React.useState<Selection>("all");
+  const [rowsPerPage, setRowsPerPage] = React.useState(5);
 
+  const [page, setPage] = React.useState(1);
+
+  const [stats, setStats] = useState<DailyStatType[]>([]);
   useEffect(() => {
     const now = new Date();
     const to = now.getTime();
     const from = new Date(now.setMonth(now.getMonth() - 3)).getTime();
-
-    axios.get(`${baseUrl}tx-detail?apiKey=${apiKey}&secret=${secret}&from=${from}&to=${to}`)
-      .then((res) => {
-        setTransactions(res.data.transactions);
-      });
 
     axios.get(`${baseUrl}daily-stats?apiKey=${apiKey}&secret=${secret}&from=${from}&to=${to}`)
       .then((res) => {
@@ -30,16 +64,126 @@ export function Content() {
       });
   }, []);
 
-  return (
-    <main className="flex min-h-screen flex-col p-4">
-      <div className="text-4xl p-4 text-center">Daily Stats</div>
-      <div>
-        {
-          stats.map((item, i) => {
-            return <DailyStatItem key={i} item={item} />
-          })
-        }
+  const pages = Math.ceil(stats.length / rowsPerPage);
+
+  const items = React.useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+
+    return stats.slice(start, end);
+  }, [page, stats, rowsPerPage]);
+
+  const renderCell = React.useCallback((tx: any, columnKey: React.Key) => {
+    const cellValue = tx[columnKey as keyof DailyStatType];
+    const total = tx.success + tx.failure;
+
+    switch (columnKey) {
+      case "status":
+        return (
+          <Chip className="capitalize" color={tx.success === total ? "success" : "danger"} size="sm" variant="flat">
+            {`${tx.success}/${total}`}
+          </Chip>
+        );
+      default:
+        return cellValue;
+    }
+  }, []);
+
+  const onNextPage = React.useCallback(() => {
+    if (page < pages) {
+      setPage(page + 1);
+    }
+  }, [page, pages]);
+
+  const onPreviousPage = React.useCallback(() => {
+    if (page > 1) {
+      setPage(page - 1);
+    }
+  }, [page]);
+
+  const onRowsPerPageChange = React.useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setRowsPerPage(Number(e.target.value));
+    setPage(1);
+  }, []);
+
+  const topContent = React.useMemo(() => {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <span className="text-default-400 text-small">Total {stats.length} stats</span>
+          <label className="flex items-center text-default-400 text-small">
+            Rows per page:
+            <select
+              className="bg-transparent outline-none text-default-400 text-small"
+              onChange={onRowsPerPageChange}
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+            </select>
+          </label>
+        </div>
       </div>
-    </main>
+    );
+  }, [
+    onRowsPerPageChange,
+    stats.length,
+  ]);
+
+  const bottomContent = React.useMemo(() => {
+    return (
+      items.length > 0 && <div className="py-2 px-2 flex justify-between items-center">
+        <Pagination
+          isCompact
+          showControls
+          showShadow
+          color="primary"
+          page={page}
+          total={pages}
+          onChange={setPage}
+        />
+        <div className="hidden sm:flex w-[30%] justify-end gap-2">
+          <Button isDisabled={pages === 1} size="sm" variant="flat" onPress={onPreviousPage}>
+            Previous
+          </Button>
+          <Button isDisabled={pages === 1} size="sm" variant="flat" onPress={onNextPage}>
+            Next
+          </Button>
+        </div>
+      </div>
+    );
+  }, [items.length, page, pages]);
+
+  return (
+    <div className="p-8">
+      <div className="text-xl pb-4">Daily Stats</div>
+      <Table
+        aria-label="Example table with custom cells, pagination and sorting"
+        isHeaderSticky
+        bottomContent={bottomContent}
+        bottomContentPlacement="outside"
+        topContent={topContent}
+        topContentPlacement="outside"
+      >
+        <TableHeader columns={columns}>
+          {(column) => (
+            <TableColumn
+              key={column.uid}
+              align={column.uid === "actions" ? "center" : "start"}
+            >
+              {column.name}
+            </TableColumn>
+          )}
+        </TableHeader>
+        <TableBody emptyContent={"No stats found"} items={items}>
+          {(item) => (
+            <TableRow key={item.date}>
+              {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
-}
+};
