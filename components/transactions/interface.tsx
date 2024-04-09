@@ -12,6 +12,11 @@ export const statusColorMap: Record<string, ChipProps["color"]> = {
     running: "warning",
 };
 
+export interface Swapper {
+    uid: number;
+    name: string;
+}
+
 export interface AddressType {
     blockchain: string;
     symbol: string;

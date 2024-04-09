@@ -11,3 +11,17 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.react-datepicker__input-container {
+  height: 100%;
+}
+
+.react-datepicker__input-container input {
+  outline: none;
+  border-radius: 0.5em;
+  padding: 0 0.5em;
+}
+
+.react-datepicker-popper {
+  z-index: 21 !important;
+}

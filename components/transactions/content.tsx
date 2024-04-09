@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import DatePicker from "react-datepicker";
 import {
   Table,
   TableHeader,
@@ -28,9 +29,10 @@ import {
   ModalFooter,
   useDisclosure
 } from "@nextui-org/react";
+import "react-datepicker/dist/react-datepicker.css";
 import { TransactionDetail } from "./TransactionDetails";
 import { ChevronDownIcon } from "@/components/icons/chevron-down-icon";
-import { statusOptions, statusColorMap, TransactionType, AddressType } from "./interface";
+import { statusOptions, statusColorMap, TransactionType, AddressType, Swapper } from "./interface";
 
 import axios from "axios";
 import { apiKey, secret, baseUrl } from "@/config/rango";
@@ -44,23 +46,39 @@ const columns = [
 
 export function Content() {
   const [statusFilter, setStatusFilter] = React.useState<Selection>("all");
+  const [swapperFilter, setSwapperFilter] = React.useState<Selection>("all");
+  const [swapperIds, setSwapperIds] = React.useState<Swapper[]>([]);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
-  const {isOpen, onOpen, onOpenChange} = useDisclosure();
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
   const [page, setPage] = React.useState(1);
+  const [startDate, setStartDate] = React.useState<Date | null>(() => {
+    let now = new Date();
+    now.setMonth(now.getMonth() - 3);
+    return now;
+  });
+  const [endDate, setEndDate] = React.useState<Date | null>(new Date());
 
   const [transactions, setTransactions] = useState<TransactionType[]>([]);
   const [curTransaction, setCurTransaction] = useState<TransactionType>();
   useEffect(() => {
-    const now = new Date();
-    const to = now.getTime();
-    const from = new Date(now.setMonth(now.getMonth() - 3)).getTime();
-
-    axios.get(`${baseUrl}tx-detail?apiKey=${apiKey}&secret=${secret}&from=${from}&to=${to}`)
+    axios.get(`${baseUrl}tx-detail?apiKey=${apiKey}&secret=${secret}&from=${startDate?.getTime()}&to=${endDate?.getTime()}`)
       .then((res) => {
         setTransactions(res.data.transactions);
-      });
-  }, []);
+
+        const swappers: Swapper[] = [];
+        res.data.transactions.map((tx: TransactionType) => {
+          tx.steps.map((step) => {
+            if (swappers.some(item => item.name === step.swapperId) === false)
+              swappers.push({uid: swappers.length, name: step.swapperId});
+          })
+        })
+        setSwapperIds(swappers);
+      })
+      .catch((err) => {
+        console.log(err);
+      })
+  }, [startDate, endDate]);
 
   const filteredItems = React.useMemo(() => {
     let filtered = [...transactions];
@@ -71,8 +89,14 @@ export function Content() {
       );
     }
 
+    if (swapperFilter !== "all" && Array.from(swapperFilter).length !== swapperIds.length) {
+      filtered = filtered.filter((tx) => 
+        tx.steps.some(step => Array.from(swapperFilter).includes(swapperIds.findIndex(x => x.name === step.swapperId).toString())),
+      );
+    }
+
     return filtered;
-  }, [transactions, statusFilter]);
+  }, [transactions, statusFilter, swapperFilter]);
 
   const pages = Math.ceil(filteredItems.length / rowsPerPage);
 
@@ -139,7 +163,12 @@ export function Content() {
     return (
       <div className="flex flex-col gap-4">
         <div className="flex justify-between gap-3 items-end">
-          <div className="flex gap-3">
+          <div className="flex gap-4">
+            <div className="flex">
+              <DatePicker className="h-full" selected={startDate} onChange={(date) => setStartDate(date)} maxDate={endDate} />
+              <span className="flex flex-col justify-center px-4">-</span>
+              <DatePicker className="h-full" selected={endDate} onChange={(date) => setEndDate(date)} />
+            </div>
             <Dropdown>
               <DropdownTrigger className="hidden sm:flex">
                 <Button endContent={<ChevronDownIcon className="text-small" />} variant="flat">
@@ -157,6 +186,27 @@ export function Content() {
                 {statusOptions.map((status) => (
                   <DropdownItem key={status.uid} className="capitalize">
                     {status.name}
+                  </DropdownItem>
+                ))}
+              </DropdownMenu>
+            </Dropdown>
+            <Dropdown>
+              <DropdownTrigger className="hidden sm:flex">
+                <Button endContent={<ChevronDownIcon className="text-small" />} variant="flat">
+                  Swapper Id
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu
+                disallowEmptySelection
+                aria-label="Table Columns"
+                closeOnSelect={false}
+                selectedKeys={swapperFilter}
+                selectionMode="multiple"
+                onSelectionChange={setSwapperFilter}
+              >
+                {swapperIds.map((swapper) => (
+                  <DropdownItem key={swapper.uid} className="capitalize">
+                    {swapper.name}
                   </DropdownItem>
                 ))}
               </DropdownMenu>
@@ -182,8 +232,11 @@ export function Content() {
     );
   }, [
     statusFilter,
+    swapperFilter,
     onRowsPerPageChange,
     transactions.length,
+    startDate,
+    endDate,
   ]);
 
   const bottomContent = React.useMemo(() => {

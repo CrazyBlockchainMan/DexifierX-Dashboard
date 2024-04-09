@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import DatePicker from "react-datepicker";
 import {
   Table,
   TableHeader,
@@ -22,6 +23,7 @@ import {
   ChipProps,
   SortDescriptor
 } from "@nextui-org/react";
+import "react-datepicker/dist/react-datepicker.css";
 import { ChevronDownIcon } from "@/components/icons/chevron-down-icon";
 
 import axios from "axios";
@@ -51,18 +53,23 @@ export function Content() {
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
 
   const [page, setPage] = React.useState(1);
+  const [startDate, setStartDate] = React.useState<Date | null>(() => {
+    let now = new Date();
+    now.setMonth(now.getMonth() - 3);
+    return now;
+  });
+  const [endDate, setEndDate] = React.useState<Date | null>(new Date());
 
   const [stats, setStats] = useState<DailyStatType[]>([]);
   useEffect(() => {
-    const now = new Date();
-    const to = now.getTime();
-    const from = new Date(now.setMonth(now.getMonth() - 3)).getTime();
-
-    axios.get(`${baseUrl}daily-stats?apiKey=${apiKey}&secret=${secret}&from=${from}&to=${to}`)
+    axios.get(`${baseUrl}daily-stats?apiKey=${apiKey}&secret=${secret}&from=${startDate?.getTime()}&to=${endDate?.getTime()}`)
       .then((res) => {
         setStats(res.data.stats);
-      });
-  }, []);
+      })
+      .catch((err) => {
+        console.log(err);
+      })
+  }, [startDate, endDate]);
 
   const pages = Math.ceil(stats.length / rowsPerPage);
 
@@ -109,6 +116,13 @@ export function Content() {
   const topContent = React.useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-end">
+          <div className="flex h-[40px]">
+            <DatePicker className="h-full" selected={startDate} onChange={(date) => setStartDate(date)} maxDate={endDate} />
+            <span className="flex flex-col justify-center px-4">-</span>
+            <DatePicker className="h-full" selected={endDate} onChange={(date) => setEndDate(date)} />
+          </div>
+        </div>
         <div className="flex justify-between items-center">
           <span className="text-default-400 text-small">Total {stats.length} stats</span>
           <label className="flex items-center text-default-400 text-small">
